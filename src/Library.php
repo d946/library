@@ -22,7 +22,7 @@ class Library
     }
 
     //---------------------------------------------------------------------------------------------------------
-    function find_First_Min_Max(array $dtL, &$afPrice, &$minA, &$maxA, &$price, $keyPrice = '4', $cntA = 100000)
+    public function find_First_Min_Max(array $dtL, &$afPrice, &$minA, &$maxA, &$price, $keyPrice = '4', $cntA = 100000)
     {
         $i = 0;
         $minA = 100000;
@@ -50,7 +50,7 @@ class Library
     }
 
     //---------------------------------------------------------------------------------------------------------
-    function getDayYF($dir, $tickerName, $start)
+    public function getDayYF($dir, $tickerName, $start)
     {
         $dstart = strtotime($start);
         //$tm = (time() / 86400) * 86400;
@@ -86,7 +86,7 @@ class Library
     }
 
     //---------------------------------------------------------------------------------------------------------
-    function tickCSVtoData($file, $ticker)
+    private function tickCSVtoData($file, $ticker)
     {
         $csv = explode("\r\n", $file);
         unset($csv[0]);
@@ -102,7 +102,7 @@ class Library
     }
 
     //---------------------------------------------------------------------------------------------------------
-    function getFinamTick($dir, $tickerName, $start, $market = "BATS", $end = null)
+    public function getFinamTick($dir, $tickerName, $start, $market = "BATS", $end = null)
     {
         if (!isset($ids)) {
             if (file_exists($dir . '/files/finamIds.json')) {
@@ -177,7 +177,7 @@ class Library
             if (($ftime + 86400) > time()) {
                 unset($file);
             } else {
-                $data = tickCSVtoData($file, $ticker);
+                $data = $this->tickCSVtoData($file, $ticker);
                 /*
                 if (file_exists($filenamejson)){
                     $data = json_decode(file_get_contents($filenamejson),true);
@@ -218,7 +218,7 @@ class Library
                     //file_put_contents($filenamejson,json_encode($data));
                 }
             }
-            $data = tickCSVtoData($file, $ticker);
+            $data = $this->tickCSVtoData($file, $ticker);
         }
         return $data;
     }
