@@ -335,4 +335,169 @@ class Library
         }*/
     }
 
+    //---------------------------------------------------------------------------------------------------------
+    function getSimpleVolumes(array $dtL, $keyPrice = '4', $keyVolume = '5', $keyOper = '7', $cntA = 100000)
+    {
+        $dtrd = [];
+        $i = 0;
+        foreach ($dtL as $item) {
+            $item[$keyPrice] = str_replace(',', '.', $item[$keyPrice]);
+            $price = floatval($item[$keyPrice]);
+            $kprice = number_format($price + 0.0005, 2, '.', '');
+            if (isset($dtrd[$kprice][$item[$keyOper]])) {
+                $dtrd[$kprice][$item[$keyOper]] += $item[$keyVolume];
+            } else {
+                $dtrd[$kprice][$item[$keyOper]] = $item[$keyVolume];
+                $dtrd[$kprice][$item[$keyOper]] += 0;
+            }
+            $i++;
+            if ($i > $cntA) {
+                break;
+            }
+
+        }
+        return $dtrd;
+    }
+
+    //---------------------------------------------------------------------------------------------------------
+    function getGroupVolumes(array $dtrd, $vstep, $fPrice, $minA, $maxA)
+    {
+        krsort($dtrd);
+        //print_r($dtrd);
+        $vs = 0.01 * ($vstep);
+        $dtrdd = [];
+        $cntUp = (int)((($maxA - $minA) + $vs * 3) / $vs);
+        //echo "\r\n $vs $cntUp $fPrice $minA $maxA \r\n";
+        for ($dd = $cntUp; $dd > -$cntUp; $dd--) {
+            $basePriceInt = (int)((($fPrice * 100.0) + 0.001) + ($dd * $vstep));
+            $basePrice = number_format($basePriceInt / 100.0 + 0.001, 2, '.', '');
+            //echo "$basePrice\r\n";
+            $ssum = 0;
+            $ssumB = 0;
+            $ssumS = 0;
+            if (isset($dtrd[$basePrice])) {
+                if (isset($dtrd[$basePrice]['B'])) {
+                    $dtrdd[$basePrice]['detail'][$basePrice]['B'] = $dtrd[$basePrice]['B'];
+                    $ssum += $dtrd[$basePrice]['B'];
+                    $ssumB += $dtrd[$basePrice]['B'];
+                }
+
+                if (isset($dtrd[$basePrice]['S'])) {
+                    $dtrdd[$basePrice]['detail'][$basePrice]['S'] = $dtrd[$basePrice]['S'];
+                    $ssum += $dtrd[$basePrice]['S'];
+                    $ssumS += $dtrd[$basePrice]['S'];
+                }
+            }
+            for ($i = 1; $i < $vstep; $i++) {
+                $basePriceNInt = (int)($basePriceInt - $i);
+                $basePriceN = number_format($basePriceNInt / 100.0 + 0.001, 2, '.', '');
+                if (isset($dtrd[$basePriceN])) {
+                    if (isset($dtrd[$basePriceN]['B'])) {
+                        $dtrdd[$basePrice]['detail'][$basePriceN]['B'] = $dtrd[$basePriceN]['B'];
+                        $ssum += $dtrd[$basePriceN]['B'];
+                        $ssumB += $dtrd[$basePriceN]['B'];
+                    }
+                    if (isset($dtrd[$basePriceN]['S'])) {
+                        $dtrdd[$basePrice]['detail'][$basePriceN]['S'] = $dtrd[$basePriceN]['S'];
+                        $ssum += $dtrd[$basePriceN]['S'];
+                        $ssumS += $dtrd[$basePriceN]['S'];
+                    }
+                }
+            }
+            if ($ssum > 0) {
+                $dtrdd[$basePrice]['v'] = $ssum;
+                $dtrdd[$basePrice]['b'] = $ssumB;
+                $dtrdd[$basePrice]['s'] = $ssumS;
+            }
+        }
+        krsort($dtrdd);
+        return $dtrdd;
+    }
+
+   //---------------------------------------------------------------------------------------------------------
+    function getGaps(array $dtL, $vstep, $keyPrice = '4', $keyDate = '3', $keyVolume = '5', $keyOper = '7', $cntA = 100000)
+    {
+        $i = 0;
+        $gap = [];
+        foreach ($dtL as $item) {
+            $item[$keyPrice] = str_replace(',', '.', $item[$keyPrice]);
+            $price = floatval($item[$keyPrice]);
+            if (isset($sv)) {
+                if (abs($price - $sv) >= ($vstep * 0.01 * 3)) {
+                    if (substr($item[$keyDate], 0, 4) != '1000') {
+                        $gap[] = [$item[$keyDate], $sv, $price, number_format($price - $sv, 2), $item[$keyOper], $item[$keyVolume]];
+                    }
+                }
+                $sv = $price;
+            } else {
+                $sv = $price;
+            }
+            $i++;
+            if ($i > $cntA) {
+                break;
+            }
+        }
+        return $gap;
+    }
+
+    //---------------------------------------------------------------------------------------------------------
+    function getBricks(array $dtL, $brickSize, $keyPrice = '4', $keyDate = '3', $cntA = 100000)
+    {
+        $dtb = [];
+        unset($oldValue);
+        $i = 0;
+        foreach ($dtL as $item) {
+            $item[$keyPrice] = str_replace(',', '.', $item[$keyPrice]);
+            $price = floatval($item[$keyPrice]);
+            if (!isset($oldValue)) {
+                $oldValue = $price;
+                $min = $oldValue;
+                $max = $oldValue;
+            } else {
+                $difference = $price - $oldValue;
+                if (($difference > 0) && ($difference > $brickSize)) {
+
+                    for ($j = 0; $j < (int)($difference / $brickSize); $j++) {
+                        $newValue = $oldValue + $brickSize;
+                        if ($j == 0) {
+                            $dtb[] = [$oldValue, $newValue, $min < $oldValue ? $min : $oldValue, $max > $newValue ? $max : $newValue, $item[$keyDate]];
+                        } else {
+                            $dtb[] = [$oldValue, $newValue, $oldValue, $newValue, $item[$keyDate]];
+                        }
+                        $oldValue = $newValue;
+                    }
+                    $min = $oldValue;
+                    $max = $oldValue;
+
+                } else if (($difference < 0) && (abs($difference) > $brickSize)) {
+                    for ($j = 0; $j < (int)(abs($difference) / $brickSize); $j++) {
+                        $newValue = $oldValue - $brickSize;
+                        if ($j == 0) {
+                            $dtb[] = [$oldValue, $newValue, $min < $newValue ? $min : $newValue, $max > $oldValue ? $max : $oldValue, $item[$keyDate]];
+                        } else {
+                            $dtb[] = [$oldValue, $newValue, $newValue, $oldValue, $item[$keyDate]];
+                        }
+                        $oldValue = $newValue;
+                    }
+                    $min = $oldValue;
+                    $max = $oldValue;
+
+                } else {
+                    if ($price > $max) {
+                        $max = $price;
+                    }
+                    if ($price < $min) {
+                        $min = $price;
+                    }
+
+                }
+            }
+            $i++;
+            if ($i > $cntA) {
+                break;
+            }
+        }
+        return $dtb;
+    }
+
 }
