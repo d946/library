@@ -223,4 +223,116 @@ class Library
         return $data;
     }
 
+    //---------------------------------------------------------------------------------------------------------
+    public function findPosByStep(array $dtL, $step, $keyPrice = '4')
+    {
+        $i = 0;
+        $cntA = 0;
+        unset($newprice);
+        foreach ($dtL as $item) {
+            $item[$keyPrice] = str_replace(',', '.', $item[$keyPrice]);
+            $price = floatval($item[$keyPrice]);
+            if (!isset($newprice)) {
+                $newprice = $price;
+            } else if ($price != $newprice) {
+                $newprice = $price;
+                $i++;
+            }
+            $cntA++;
+            if ($i > $step) {
+                break;
+            }
+        }
+        return $cntA;
+    }
+
+    //---------------------------------------------------------------------------------------------------------
+    public function calc_Vstep_and_BS($atr, $ticker, &$vstep, &$brickSize, $cnt = 12)
+    {
+        if (file_exists('bs.json')) {
+            $custom = json_decode(file_get_contents('bs.json'), true);
+        } else {
+            $custom = [];
+        }
+        if (isset($custom[$ticker])) {
+            $brickSize = $custom[$ticker][1];
+            $vstep = $custom[$ticker][0];
+            return;
+        } else {
+            $vstep = (int)(($atr * 100.0) / 50.0);
+            if ($vstep < 1) {
+                $vstep = 1;
+            }
+            $brickSize = $vstep * 0.05;
+            $brickSize = number_format($brickSize, 2, '.', '');
+            $custom[$ticker][1] = $brickSize;
+            $custom[$ticker][0] = $vstep;
+            file_put_contents('bs.json', json_encode($custom));
+        }
+        /*
+        $custom=[
+          'SBER'=>[ 0.25, 10],
+          'GAZP'=>[ 0.25, 10],
+          'YNDX'=>[ 20.0, 250],
+          'ROSN'=>[ 0.5, 15],
+          'MOEX'=>[ 0.25, 10],
+          'TATN'=>[ 1.0, 50],
+          'AFKS'=>[ 0.05, 2],
+          'WELL'=>[ 0.05, 3],
+          'GMKN'=>[ 20.0, 500],
+          'NVTK'=>[ 2.0, 50],
+        ];
+        $info=[
+          [0     ,   0.5 , 0.01, 2],
+          [0.50  ,   1.0 , 0.02, 5],
+          [1.0   ,   2.5 , 0.05, 10],
+          [2.5   ,   5.0 , 0.25, 10],
+          [5.0   ,  10.0 , 0.50, 10],
+          [10.0   , 50.0 , 1.00, 10],
+          [50.0  , 100.0 , 1.00, 10],
+          [100.0 , 150.0 , 4.00, 200],
+          [150.0 , 2000.0 , 10.00, 200],
+        ];
+        if (isset($custom[$ticker])){
+            $brickSize = $custom[$ticker][0];
+            $vstep = $custom[$ticker][1];
+            return;
+        }
+        foreach($info as $item){
+            if (($atr>$item[0])&&($atr<=$item[1])){
+                $bs = $item[2];
+                $vstep = $item[3];
+            }
+        }
+        if (!isset($bs)){
+            $bs = 0.05;
+            $vstep = 1;
+        }
+        $brickSize = $bs;*/
+        /*
+        $step = $atr / $cnt;
+        if ($step < 0.05) {
+            $brickSize = 0.01;
+            $vstep = 1;
+        } else if ($step < 0.10) {
+            $brickSize = 0.05;
+            $vstep = 1;
+        } else if ($step < 0.20)
+            $brickSize = 0.10;
+            $vstep = 5;
+        else if ($step < 0.30)
+            $brickSize = 0.25;
+            $vstep = 5;
+        else if ($step < 0.50)
+            $brickSize = 0.25;
+            $vstep = 5;
+        else if ($step < 0.75)
+            $brickSize = 0.50;
+            $vstep = 5;
+        else {
+            $brickSize = 5.0;
+            $vstep = 200;
+        }*/
+    }
+
 }
