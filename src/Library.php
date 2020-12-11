@@ -561,6 +561,7 @@ class Library
             'getTime'=>$timediff,
             'getTimeAll'=>$timediffAll,
             'label'=> date('h:i:s d/m/y'),
+            'ticker'=>$ticker,
             'min' => $minInRange,
             'max' => $maxInRange];
         return $tmp;
