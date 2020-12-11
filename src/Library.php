@@ -500,4 +500,69 @@ class Library
         return $dtb;
     }
 
+    function mode_fTick($dir, $ticker, $dt, $market, $step){
+
+        $dstart = strtotime($dt);
+
+        $starttime = microtime(true);
+
+        $dataTick = $this->getFinamTick($dir, $ticker, $dt, $market);// получение тиковых данных
+
+        $endtime = microtime(true);
+        $timediff = $endtime - $starttime;
+
+        // получение дневных данных
+        $filename = $dir . '/cache/ld/' . $ticker . '/' . date('ymd', $dstart) . '_day.txt';//../../repo/saved/
+        if (file_exists($filename)) {
+            $file = file_get_contents($filename);
+            $dataDay = json_decode(file_get_contents($filename),true);
+        }
+        if (!isset($file)) {
+            $dataDay = json_decode(file_get_contents("http://localhost:8080/data?t=$ticker" . ($market == "MOEX" ? ".MM" : "") . "&y=" . date('Y', $dstart) . "&m=" . date('m', $dstart) . "&d=" . date('j', $dstart) . "&c=60"), true)['data'];
+            if (!is_dir(dirname($filename))) {
+                mkdir(dirname($filename), 0755, true);
+            }
+            file_put_contents($filename,json_encode($dataDay));
+        }
+        // получение массива atrs
+        foreach (array_slice($dataDay, -19, 18) as $el) {
+            $atrs[] = $el[3] - $el[4];
+        }
+
+        $atr = $this->calcATR($atrs);// расчет atr
+
+        $prevPrice = array_slice($dataDay, -2);
+
+        $cntTickInStep = $this->findPosByStep($dataTick, $step, '4');// получение кол-ва первичных данных
+
+        $this->find_First_Min_Max($dataTick, $startPrice, $minInRange, $maxInRange, $price, '4', $cntTickInStep);// получение мин и мах
+
+        $this->calc_Vstep_and_BS($atr, $ticker, $vstep, $brickSize);
+
+        $sVolume = $this->getSimpleVolumes($dataTick, '4', '5', '7', $cntTickInStep);// получение объемов с минимальным шагом
+        //print_r($sVolume);
+
+        $tmp['info'] = [];
+        $tmp['d'] = $dataDay;
+        $tmp['vdd'] = $this->getGroupVolumes($sVolume, $vstep, $startPrice, $minInRange, $maxInRange); // получение объемов с заданным шагом
+        $tmp['b'] = $this->getBricks($dataTick, $brickSize, '4', '3', $cntTickInStep); // расчет bricks
+        $tmp['gap'] = $this->getGaps($dataTick, $vstep, '4', '3', '5', '7',$cntTickInStep); // расчет гепов
+
+        $endtime = microtime(true);
+        $timediffAll = $endtime - $starttime;
+        $tmp['info'] = [
+            'StartPrice' => $startPrice,
+            'ClosePrice' => $price,
+            'ATR' => number_format($atr + 0.005, 2),
+            'PrevClose' => $prevPrice[0][5],
+            'bs' => $brickSize,
+            'vs' => $vstep,
+            'isLast'=>($cntTickInStep==count($dataTick)),
+            'getTime'=>$timediff,
+            'getTimeAll'=>$timediffAll,
+            'min' => $minInRange,
+            'max' => $maxInRange];
+        return $tmp;
+    }
+
 }
