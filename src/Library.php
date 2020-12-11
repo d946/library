@@ -560,6 +560,7 @@ class Library
             'isLast'=>($cntTickInStep==count($dataTick)),
             'getTime'=>$timediff,
             'getTimeAll'=>$timediffAll,
+            'label'=> date('h:i:s d/m/y'),
             'min' => $minInRange,
             'max' => $maxInRange];
         return $tmp;
