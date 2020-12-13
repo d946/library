@@ -112,7 +112,7 @@ class Library
         $pdo = new PDO($dsn, 'root', '1', $opt);
 
         $data = [];
-        $result = $pdo->query('select * from dde where TICKER="GAZP" order by id')->fetchAll();
+        $result = $pdo->query('select * from dde where TICKER="$tickerName" order by id')->fetchAll();
         if (count($result) > 0) {
             foreach ($result as $item) {
                 $data[] = [$item['TICKER'], 0, "20201211", str_replace(':', '', $item['TLABEL']), $item['PRICE'], $item['CNT'] * 10, $item['UID'], ($item['OPER'] == "Продажа" ? "S" : ($item['OPER'] == "Купля" ? "B" : ""))];
@@ -520,7 +520,11 @@ class Library
 
         $starttime = microtime(true);
 
-        $dataTick = $this->($fTick)($dir, $ticker, $dt, $market);// получение тиковых данных
+        if ($fTick == 'getFinamTick') {
+            $dataTick = $this->getFinamTick($dir, $ticker, $dt, $market);// получение тиковых данных
+        }else{
+            $dataTick = $this->getTickDB($dir, $ticker, $dt, $market);// получение тиковых данных
+        }
 
         $endtime = microtime(true);
         $timediff = $endtime - $starttime;
