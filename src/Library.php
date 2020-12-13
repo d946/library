@@ -101,13 +101,32 @@ class Library
         return $data;
     }
 
+    public function getTickDB($dir, $tickerName, $start, $market = "BATS", $end = null)
+    {
+        $dsn = "mysql:host=localhost;dbname=test;charset=$charset";
+        $opt = [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ];
+        $pdo = new PDO($dsn, 'root', '1', $opt);
+
+        $data = [];
+        $result = $pdo->query('select * from dde where TICKER="GAZP" order by id')->fetchAll();
+        if (count($result) > 0) {
+            foreach ($result as $item) {
+                $data[] = [$item['TICKER'], 0, "20201211", str_replace(':', '', $item['TLABEL']), $item['PRICE'], $item['CNT'] * 10, $item['UID'], ($item['OPER'] == "Продажа" ? "S" : ($item['OPER'] == "Купля" ? "B" : ""))];
+            }
+        }
+        return $data;
+    }
+
     //---------------------------------------------------------------------------------------------------------
     public function getFinamTick($dir, $tickerName, $start, $market = "BATS", $end = null)
     {
         if (!isset($ids)) {
             if (file_exists($dir . '/files/finamIds.json')) {
                 $ids = json_decode(file_get_contents($dir . '/files/finamIds.json'), true);
-                //$ids = $ids['BATS'];
             } else {
                 $ids['BATS'] = [
                     'MSFT' => ['name' => 'US1.MSFT', 'market' => 25, 'em' => 19068],
@@ -164,7 +183,6 @@ class Library
         foreach ($params as $k => $v) {
             $fields[] = $k . '=' . $v;
         }
-        $url = $base . $ticker . "_" . date('ymj', $dstart) . "_" . date('ymj', $dend) . ".txt?" . implode('&', $fields);
         $url = $base . "export9.out?" . implode('&', $fields);
         //	export9.out
         $filename = $dir . '/cache/ft/' . $tickerName . '/' . date('ymd', $dstart) . '.txt';//../../repo/saved/
@@ -205,7 +223,6 @@ class Library
                 ]
             ];
 
-            // DOCS: https://www.php.net/manual/en/function.stream-context-create.php
             $context = stream_context_create($opts);
             $file = file_get_contents($url, false, $context);
             if ($file !== false) {
@@ -214,8 +231,6 @@ class Library
                 }
                 if (date('ymj', $dstart) != date('ymj', time())) {
                     file_put_contents($filename, time() . gzcompress($file, 9));
-                    //file_put_contents($filename, time() . $file);
-                    //file_put_contents($filenamejson,json_encode($data));
                 }
             }
             $data = $this->tickCSVtoData($file, $ticker);
@@ -363,15 +378,13 @@ class Library
     function getGroupVolumes(array $dtrd, $vstep, $fPrice, $minA, $maxA)
     {
         krsort($dtrd);
-        //print_r($dtrd);
         $vs = 0.01 * ($vstep);
         $dtrdd = [];
         $cntUp = (int)((($maxA - $minA) + $vs * 3) / $vs);
-        //echo "\r\n $vs $cntUp $fPrice $minA $maxA \r\n";
         for ($dd = $cntUp; $dd > -$cntUp; $dd--) {
             $basePriceInt = (int)((($fPrice * 100.0) + 0.001) + ($dd * $vstep));
             $basePrice = number_format($basePriceInt / 100.0 + 0.001, 2, '.', '');
-            //echo "$basePrice\r\n";
+
             $ssum = 0;
             $ssumB = 0;
             $ssumS = 0;
@@ -414,7 +427,7 @@ class Library
         return $dtrdd;
     }
 
-   //---------------------------------------------------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------
     function getGaps(array $dtL, $vstep, $keyPrice = '4', $keyDate = '3', $keyVolume = '5', $keyOper = '7', $cntA = 100000)
     {
         $i = 0;
@@ -500,13 +513,14 @@ class Library
         return $dtb;
     }
 
-    function mode_fTick($dir, $ticker, $dt, $market, $step){
+    function mode_fTick($dir, $ticker, $dt, $market, $step, $fTick = 'getFinamTick')
+    {
 
         $dstart = strtotime($dt);
 
         $starttime = microtime(true);
 
-        $dataTick = $this->getFinamTick($dir, $ticker, $dt, $market);// получение тиковых данных
+        $dataTick = $this->($fTick)($dir, $ticker, $dt, $market);// получение тиковых данных
 
         $endtime = microtime(true);
         $timediff = $endtime - $starttime;
@@ -515,14 +529,14 @@ class Library
         $filename = $dir . '/cache/ld/' . $ticker . '/' . date('ymd', $dstart) . '_day.txt';//../../repo/saved/
         if (file_exists($filename)) {
             $file = file_get_contents($filename);
-            $dataDay = json_decode(file_get_contents($filename),true);
+            $dataDay = json_decode(file_get_contents($filename), true);
         }
         if (!isset($file)) {
             $dataDay = json_decode(file_get_contents("http://localhost:8080/data?t=$ticker" . ($market == "MOEX" ? ".MM" : "") . "&y=" . date('Y', $dstart) . "&m=" . date('m', $dstart) . "&d=" . date('j', $dstart) . "&c=60"), true)['data'];
             if (!is_dir(dirname($filename))) {
                 mkdir(dirname($filename), 0755, true);
             }
-            file_put_contents($filename,json_encode($dataDay));
+            file_put_contents($filename, json_encode($dataDay));
         }
         // получение массива atrs
         foreach (array_slice($dataDay, -19, 18) as $el) {
@@ -540,13 +554,12 @@ class Library
         $this->calc_Vstep_and_BS($atr, $ticker, $vstep, $brickSize);
 
         $sVolume = $this->getSimpleVolumes($dataTick, '4', '5', '7', $cntTickInStep);// получение объемов с минимальным шагом
-        //print_r($sVolume);
 
         $tmp['info'] = [];
         $tmp['d'] = $dataDay;
         $tmp['vdd'] = $this->getGroupVolumes($sVolume, $vstep, $startPrice, $minInRange, $maxInRange); // получение объемов с заданным шагом
         $tmp['b'] = $this->getBricks($dataTick, $brickSize, '4', '3', $cntTickInStep); // расчет bricks
-        $tmp['gap'] = $this->getGaps($dataTick, $vstep, '4', '3', '5', '7',$cntTickInStep); // расчет гепов
+        $tmp['gap'] = $this->getGaps($dataTick, $vstep, '4', '3', '5', '7', $cntTickInStep); // расчет гепов
 
         $endtime = microtime(true);
         $timediffAll = $endtime - $starttime;
@@ -557,14 +570,23 @@ class Library
             'PrevClose' => $prevPrice[0][5],
             'bs' => $brickSize,
             'vs' => $vstep,
-            'isLast'=>($cntTickInStep==count($dataTick)),
-            'getTime'=>$timediff,
-            'getTimeAll'=>$timediffAll,
-            'label'=> date('h:i:s d/m/y'),
-            'ticker'=>$ticker,
+            'isLast' => ($cntTickInStep == count($dataTick)),
+            'getTime' => $timediff,
+            'getTimeAll' => $timediffAll,
+            'label' => date('h:i:s d/m/y'),
+            'ticker' => $ticker,
             'min' => $minInRange,
             'max' => $maxInRange];
         return $tmp;
+    }
+
+    function secondsToTime($s)
+    {
+        $h = floor($s / 3600);
+        $s -= $h * 3600;
+        $m = floor($s / 60);
+        $s -= $m * 60;
+        return $h . ':' . sprintf('%02d', $m) . ':' . sprintf('%02d', $s);
     }
 
 }
