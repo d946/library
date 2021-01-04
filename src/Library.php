@@ -3,6 +3,7 @@
 
 namespace D946;
 
+use \PDO;
 
 class Library
 {
@@ -109,7 +110,7 @@ class Library
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES => false,
         ];
-        $pdo = new PDO($dsn, 'root', '1', $opt);
+        $pdo = new \PDO($dsn, 'root', '1', $opt);
 
         $data = [];
         $result = $pdo->query('select * from dde where TICKER="$tickerName" order by id')->fetchAll();
@@ -536,7 +537,7 @@ class Library
             $dataDay = json_decode(file_get_contents($filename), true);
         }
         if (!isset($file)) {
-            $dataDay = json_decode(file_get_contents("http://localhost:8080/data?t=$ticker" . ($market == "MOEX" ? ".MM" : "") . "&y=" . date('Y', $dstart) . "&m=" . date('m', $dstart) . "&d=" . date('j', $dstart) . "&c=60"), true)['data'];
+            $dataDay = json_decode(file_get_contents("http://localhost:9000/data?t=$ticker" . ($market == "MOEX" ? ".MM" : "") . "&y=" . date('Y', $dstart) . "&m=" . date('m', $dstart) . "&d=" . date('j', $dstart) . "&c=60"), true)['data'];
             if (!is_dir(dirname($filename))) {
                 mkdir(dirname($filename), 0755, true);
             }
