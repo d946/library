@@ -23,7 +23,7 @@ class Library
     }
 
     //---------------------------------------------------------------------------------------------------------
-    public function find_First_Min_Max(array $dtL, &$afPrice, &$minA, &$maxA, &$price, $keyPrice = '4', $cntA = 100000)
+    public function find_First_Min_Max(array $dtL, &$afPrice, &$minA, &$maxA, &$price, &$time, $keyPrice = '4', $cntA = 100000)
     {
         $i = 0;
         $minA = 100000;
@@ -32,6 +32,7 @@ class Library
         foreach ($dtL as $item) {
             $item[$keyPrice] = str_replace(',', '.', $item[$keyPrice]);
             $price = floatval($item[$keyPrice]);
+			$time = $item[$keyPrice-1];
             if ($price < $minA) {
                 $minA = $price;
             }
@@ -554,7 +555,7 @@ class Library
 
         $cntTickInStep = $this->findPosByStep($dataTick, $step, '4');// получение кол-ва первичных данных
 
-        $this->find_First_Min_Max($dataTick, $startPrice, $minInRange, $maxInRange, $price, '4', $cntTickInStep);// получение мин и мах
+        $this->find_First_Min_Max($dataTick, $startPrice, $minInRange, $maxInRange, $price, $time, '4', $cntTickInStep);// получение мин и мах
 
         $this->calc_Vstep_and_BS($atr, $ticker, $vstep, $brickSize);
 
@@ -571,6 +572,7 @@ class Library
         $tmp['info'] = [
             'StartPrice' => $startPrice,
             'ClosePrice' => $price,
+			'CloseTime' => $time,	
             'ATR' => number_format($atr + 0.005, 2),
             'PrevClose' => $prevPrice[0][5],
             'bs' => $brickSize,
