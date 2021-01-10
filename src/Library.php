@@ -8,6 +8,36 @@ use \PDO;
 class Library
 {
 
+	//!-----------------------------------------------------------------------------
+	function findMin(array $data, $field)
+	{
+		$res = 10000.0;
+		foreach ($data as $item) {
+			if ($item[$field] == 0) {
+				continue;
+			}
+			if ($item[$field] < $res) {
+				$res = $item[$field];
+			}
+		}
+		return $res;
+	}
+
+	//!-----------------------------------------------------------------------------
+	function findMax(array $data, $field)
+	{
+		$res = 0;
+		foreach ($data as $item) {
+			if ($item[$field] == 0) {
+				continue;
+			}
+			if ($item[$field] > $res) {
+				$res = $item[$field];
+			}
+		}
+		return $res;
+	}
+
     //---------------------------------------------------------------------------------------------------------
     public function calcATR(array $atrs)
     {
