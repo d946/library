@@ -14,7 +14,7 @@ class MT5
 		$mon = date('m', $dstart);
 		$day = date('j', $dstart);
 		$days = [];
-		$data = json_decode(file_get_contents('http://'.$server.'/data?t='.$ticker.'&y=20'.$year.'&m='.$mon.'&d='.$day.'&c=180'),true);
+		$data = json_decode(file_get_contents('http://'.$server.'/data?t='.$ticker.'&y='.$year.'&m='.$mon.'&d='.$day.'&c=180'),true);
 
 		foreach($data['data'] as $item){
 		  $days[]=[
