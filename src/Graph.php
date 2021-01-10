@@ -262,4 +262,15 @@ class Graph
         imagedestroy($this->im);
         return $this;
     }
+
+    function get()
+    {
+        ob_start();
+        imagepng($this->im, null, -1);
+        $blob = ob_get_contents();
+        ob_end_clean();	
+        imagedestroy($this->im);		
+        return $blob;
+    }
+	
 }
