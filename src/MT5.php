@@ -6,7 +6,7 @@ class MT5
 {
 
 	//------------------------------------------------------------------------------
-	function getDays($server,$ticker, $dt, &$days)
+	function getDays($server, $ticker, $dt, &$days)
 	{
 		//localhost:8080
 		$dstart = strtotime($dt);
@@ -28,6 +28,20 @@ class MT5
 			 'ATR'=>number_format($item[3]-$item[4], 2, ".", "")];
 		}
 		return $days;
+	}	
+	
+	//------------------------------------------------------------------------------
+	function getTickersByGroup($server, $group, &$symbols, &$names){
+	  $symbols=[];
+	  $names=[];
+	  $data = json_decode(file_get_contents('http://'.$server.'/symbols'),true);
+	  foreach($data['symbols'] as $item){
+		if (strpos($item['path'],$group)!==false){
+		   $symbols[]=$item['name'];
+		   $names[$item['name']]=$item['desc'];
+		}
+	  }
+	  return $symbols;
 	}	
 	
 }
